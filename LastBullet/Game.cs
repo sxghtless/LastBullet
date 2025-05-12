@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System.IO;
+using LastBullet.Entities;
+using LastBullet.Core;
 
 namespace LastBullet
 {
@@ -10,16 +13,17 @@ namespace LastBullet
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
-        
+
         private Texture2D arenaTexture;
-        private Texture2D playerTexture;
-        
-        int cellSize = 130;
-        Point playerPosition = new Point(0, 0);
+        private Texture2D playerFrontTexture;
+        private Texture2D playerBackTexture;
+        private Texture2D bulletTexture;
 
-        int gridSize = 4;
+        private Player player;
+        private List<Bullet> bullets = new List<Bullet>();
 
-        bool canMove = true;
+        private Vector2 gridStart = new Vector2(255, 255);
+        private int gridCellSize = 130;
 
         public Game()
         {
@@ -32,21 +36,38 @@ namespace LastBullet
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            playerTexture = Content.Load<Texture2D>("CharacterFront");
+            playerFrontTexture = TextureUtils.ResizeToSquare(GraphicsDevice, _spriteBatch, Content.Load<Texture2D>("CharacterFront"), 1024);
+            playerBackTexture = TextureUtils.ResizeToSquare(GraphicsDevice, _spriteBatch, Content.Load<Texture2D>("CharacterBack"), 1024);
+            bulletTexture = CreateBulletTexture();
+
             using (var stream = File.OpenRead("Content/Arena.png"))
-            {
                 arenaTexture = Texture2D.FromStream(GraphicsDevice, stream);
-            }
+
             _graphics.PreferredBackBufferWidth = arenaTexture.Width;
             _graphics.PreferredBackBufferHeight = arenaTexture.Height;
             _graphics.ApplyChanges();
-            _graphics.IsFullScreen = false;
-            _graphics.ApplyChanges();
+
+            player = new Player(playerFrontTexture, playerBackTexture, gridStart, gridCellSize);
+        }
+        
+        private Texture2D CreateBulletTexture()
+        {
+            Texture2D texture = new Texture2D(GraphicsDevice, 5, 5);
+            Color[] data = new Color[25];
+            for (int i = 0; i < data.Length; i++)
+                data[i] = Color.Red;
+
+            texture.SetData(data);
+            return texture;
         }
 
         protected override void Update(GameTime gameTime)
         {
-            var keyboard = Keyboard.GetState();
+            KeyboardState keyboard = Keyboard.GetState();
+            MouseState mouse = Mouse.GetState();
+
+            if (keyboard.IsKeyDown(Keys.Escape))
+                Exit();
 
             if (keyboard.IsKeyDown(Keys.F11))
             {
@@ -54,38 +75,23 @@ namespace LastBullet
                 _graphics.ApplyChanges();
             }
 
-            if (canMove)
+            player.Update(keyboard);
+
+            if (mouse.LeftButton == ButtonState.Pressed)
             {
-                if (keyboard.IsKeyDown(Keys.D) && playerPosition.X < gridSize - 1)
-                {
-                    playerPosition.X++;
-                    canMove = false;
-                }
-                if (keyboard.IsKeyDown(Keys.A) && playerPosition.X > 0)
-                {
-                    playerPosition.X--;
-                    canMove = false;
-                }
-                if (keyboard.IsKeyDown(Keys.W) && playerPosition.Y > 0)
-                {
-                    playerPosition.Y--;
-                    canMove = false;
-                }
-                if (keyboard.IsKeyDown(Keys.S) && playerPosition.Y < gridSize - 1)
-                {
-                    playerPosition.Y++;
-                    canMove = false;
-                }
+                bullets.Add(new Bullet(player.GetCenterPosition(), new Vector2(mouse.X, mouse.Y), bulletTexture));
             }
 
-            if (!keyboard.IsKeyDown(Keys.D) && !keyboard.IsKeyDown(Keys.A) &&
-                !keyboard.IsKeyDown(Keys.W) && !keyboard.IsKeyDown(Keys.S))
+            for (int i = bullets.Count - 1; i >= 0; i--)
             {
-                canMove = true;
+                bullets[i].Update();
+                if (bullets[i].IsOffScreen(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight))
+                    bullets.RemoveAt(i);
             }
 
             base.Update(gameTime);
         }
+
 
         protected override void Draw(GameTime gameTime)
         {
@@ -93,40 +99,17 @@ namespace LastBullet
 
             _spriteBatch.Begin();
 
-            // Размеры экрана
-            int screenWidth = GraphicsDevice.PresentationParameters.BackBufferWidth;
-            int screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
-
-            // Размеры текстуры (для изображения, которое на фоне)
-            int texWidth = arenaTexture.Width;
-            int texHeight = arenaTexture.Height;
-
-            // Масштабирование текстуры фона
-            float scale = Math.Min((float)screenWidth / texWidth, (float)screenHeight / texHeight);
-
-            int drawWidth = (int)(texWidth * scale);
-            int drawHeight = (int)(texHeight * scale);
-
-            int offsetX = (screenWidth - drawWidth) / 2;
-            int offsetY = (screenHeight - drawHeight) / 2;
-
-            Rectangle destination = new Rectangle(offsetX, offsetY, drawWidth, drawHeight);
+            Rectangle destination = new Rectangle(0, 0, arenaTexture.Width, arenaTexture.Height);
             _spriteBatch.Draw(arenaTexture, destination, Color.White);
 
-            Vector2 gridStart = new Vector2(255, 255);
-            int gridCellSize = 130;
+            player.Draw(_spriteBatch);
 
-            Vector2 playerScreenPos = new Vector2(playerPosition.X * gridCellSize + gridStart.X, playerPosition.Y * gridCellSize + gridStart.Y);
-
-            playerScreenPos.X += (gridCellSize - playerTexture.Width * 0.1f) / 2;
-            playerScreenPos.Y += (gridCellSize - playerTexture.Height * 0.1f) / 2;
-
-            float playerScale = 0.1f;
-            _spriteBatch.Draw(playerTexture, playerScreenPos, null, Color.White, 0f, Vector2.Zero, playerScale, SpriteEffects.None, 0f);
+            foreach (var bullet in bullets)
+                bullet.Draw(_spriteBatch);
 
             _spriteBatch.End();
 
             base.Draw(gameTime);
-        }   
+        }
     }
 }
