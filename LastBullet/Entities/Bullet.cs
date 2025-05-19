@@ -6,9 +6,9 @@ namespace LastBullet.Entities
     public class Bullet
     {
         public Vector2 Position;
-        private Vector2 velocity;
-        private float speed = 5f;
-        private Texture2D texture;
+        private Vector2 _velocity;
+        private float _speed = 5f;
+        private Texture2D _texture;
 
         public Bullet(Vector2 start, Vector2 target, Texture2D texture)
         {
@@ -16,18 +16,18 @@ namespace LastBullet.Entities
             Vector2 direction = target - start;
             if (direction != Vector2.Zero)
                 direction.Normalize();
-            velocity = direction * speed;
-            this.texture = texture;
+            _velocity = direction * _speed;
+            this._texture = texture;
         }
 
         public void Update()
         {
-            Position += velocity;
+            Position += _velocity;
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            spriteBatch.Draw(texture, Position, null, Color.White, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+            spriteBatch.Draw(_texture, Position, null, Color.White, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
         }
 
         public bool IsOffScreen(int screenWidth, int screenHeight)

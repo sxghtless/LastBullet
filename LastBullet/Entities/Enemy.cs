@@ -19,87 +19,87 @@ namespace LastBullet.Entities
         public Point GridPosition;
         public Texture2D FrontTexture, BackTexture;
         public Texture2D CurrentTexture;
-        public float Scale => CurrentTexture == BackTexture ? 0.14f : 0.14f;
+        public float Scale => 0.14f;
         
-        private Vector2 gridStart;
-        private int gridCellSize;
-        private Random random = new Random();
-        private int shotsFired = 0;
-        private int maxShots = 3;
-        private bool needsReload = false;
-        private bool isTrapStunned = false;
-        private int trapStunDuration = 0;
-        private const int MAX_TRAP_STUN = 60; 
+        private Vector2 _gridStart;
+        private int _gridCellSize;
+        private Random _random = new Random();
+        private int _shotsFired = 0;
+        private int _maxShots = 3;
+        private bool _needsReload = false;
+        private bool _isTrapStunned = false;
+        private int _trapStunDuration = 0;
+        private const int MaxTrapStun = 60; 
         
         public Enemy(Texture2D front, Texture2D back, Vector2 gridStart, int gridCellSize)
         {
             this.FrontTexture = front;
             this.BackTexture = back;
             this.CurrentTexture = front;
-            this.gridStart = gridStart;
-            this.gridCellSize = gridCellSize;
+            this._gridStart = gridStart;
+            this._gridCellSize = gridCellSize;
             GridPosition = new Point(3, 3);
         }
         
         public void Draw(SpriteBatch spriteBatch)
         {
-            Vector2 pos = new Vector2(GridPosition.X * gridCellSize + gridStart.X,
-                                      GridPosition.Y * gridCellSize + gridStart.Y);
+            Vector2 pos = new Vector2(GridPosition.X * _gridCellSize + _gridStart.X,
+                                      GridPosition.Y * _gridCellSize + _gridStart.Y);
 
-            pos.X += (gridCellSize - CurrentTexture.Width * Scale) / 2;
-            pos.Y += (gridCellSize - CurrentTexture.Height * Scale) / 2;
+            pos.X += (_gridCellSize - CurrentTexture.Width * Scale) / 2;
+            pos.Y += (_gridCellSize - CurrentTexture.Height * Scale) / 2;
 
-            Color drawColor = isTrapStunned ? Color.Red * 0.7f : Color.White;
+            Color drawColor = _isTrapStunned ? Color.Red * 0.7f : Color.White;
             spriteBatch.Draw(CurrentTexture, pos, null, drawColor, 0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
         }
         
         public Vector2 GetCenterPosition()
         {
-            return new Vector2(GridPosition.X * gridCellSize + gridStart.X + gridCellSize / 2,
-                               GridPosition.Y * gridCellSize + gridStart.Y + gridCellSize / 2);
+            return new Vector2(GridPosition.X * _gridCellSize + _gridStart.X + _gridCellSize / 2,
+                               GridPosition.Y * _gridCellSize + _gridStart.Y + _gridCellSize / 2);
         }
         
         public void TriggerTrapEffect()
         {
-            isTrapStunned = true;
-            trapStunDuration = MAX_TRAP_STUN;
+            _isTrapStunned = true;
+            _trapStunDuration = MaxTrapStun;
         }
         
         public void Update()
         {
-            if (isTrapStunned)
+            if (_isTrapStunned)
             {
-                trapStunDuration--;
-                if (trapStunDuration <= 0)
+                _trapStunDuration--;
+                if (_trapStunDuration <= 0)
                 {
-                    isTrapStunned = false;
+                    _isTrapStunned = false;
                 }
             }
         }
         
         public EnemyAction DecideAction(Point playerPosition)
         {
-            if (needsReload)
+            if (_needsReload)
             {
-                needsReload = false;
-                shotsFired = 0;
+                _needsReload = false;
+                _shotsFired = 0;
                 return EnemyAction.Reload;
             }
             
-            if (isTrapStunned)
+            if (_isTrapStunned)
                 return EnemyAction.Dodge;
                 
             int distance = Math.Abs(GridPosition.X - playerPosition.X) + Math.Abs(GridPosition.Y - playerPosition.Y);
             
-            int choice = random.Next(100);
+            int choice = _random.Next(100);
             
             if (distance <= 1)
             {
-                if (choice < 60 && shotsFired < maxShots)
+                if (choice < 60 && _shotsFired < _maxShots)
                 {
-                    shotsFired++;
-                    if (shotsFired >= maxShots)
-                        needsReload = true;
+                    _shotsFired++;
+                    if (_shotsFired >= _maxShots)
+                        _needsReload = true;
                     return EnemyAction.Shoot;
                 }
                 else if (choice < 85)
@@ -113,11 +113,11 @@ namespace LastBullet.Entities
             }
             else if (distance <= 2)
             {
-                if (choice < 40 && shotsFired < maxShots)
+                if (choice < 40 && _shotsFired < _maxShots)
                 {
-                    shotsFired++;
-                    if (shotsFired >= maxShots)
-                        needsReload = true;
+                    _shotsFired++;
+                    if (_shotsFired >= _maxShots)
+                        _needsReload = true;
                     return EnemyAction.Shoot;
                 }
                 else if (choice < 70)
@@ -143,11 +143,11 @@ namespace LastBullet.Entities
                 {
                     return EnemyAction.PlaceTrap;
                 }
-                else if (choice < 90 && shotsFired < maxShots)
+                else if (choice < 90 && _shotsFired < _maxShots)
                 {
-                    shotsFired++;
-                    if (shotsFired >= maxShots)
-                        needsReload = true;
+                    _shotsFired++;
+                    if (_shotsFired >= _maxShots)
+                        _needsReload = true;
                     return EnemyAction.Shoot;
                 }
                 else
@@ -159,7 +159,7 @@ namespace LastBullet.Entities
         
         public void MoveTowards(Point playerPosition, bool awayFromPlayer = false)
         {
-            if (isTrapStunned)
+            if (_isTrapStunned)
                 return;
                 
             int dx = playerPosition.X - GridPosition.X;
@@ -171,7 +171,7 @@ namespace LastBullet.Entities
                 dy = -dy;
             }
             
-            if (Math.Abs(dx) > Math.Abs(dy) || (Math.Abs(dx) == Math.Abs(dy) && random.Next(2) == 0))
+            if (Math.Abs(dx) > Math.Abs(dy) || (Math.Abs(dx) == Math.Abs(dy) && _random.Next(2) == 0))
             {
                 if (dx > 0 && GridPosition.X < 3)
                 {
@@ -201,7 +201,7 @@ namespace LastBullet.Entities
         
         public bool IsStunned()
         {
-            return isTrapStunned;
+            return _isTrapStunned;
         }
         
         public Point GetTrapPlacementPosition(Point playerPosition)
@@ -232,7 +232,7 @@ namespace LastBullet.Entities
             if (possiblePositions.Count == 0)
                 return GridPosition;
                 
-            return possiblePositions[random.Next(possiblePositions.Count)];
+            return possiblePositions[_random.Next(possiblePositions.Count)];
         }
     }
 }
