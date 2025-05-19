@@ -1,10 +1,28 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using System.Collections.Generic;
 
 namespace LastBullet.Entities
 {
+    public enum PlayerActionType
+    {
+        None,
+        MoveUp,
+        MoveDown,
+        MoveLeft,
+        MoveRight,
+        Shoot,
+        PlaceTrap,
+        Dodge,
+        Reload
+    }
+
+    public class PlayerAction
+    {
+        public PlayerActionType ActionType = PlayerActionType.None;
+        public Point? TargetGridPosition;
+        public Vector2? ShootTarget;
+    }
+
     public class Player
     {
         public Point GridPosition;
@@ -12,58 +30,101 @@ namespace LastBullet.Entities
         public Texture2D CurrentTexture;
         public float Scale => CurrentTexture == BackTexture ? 0.3f : 0.14f;
 
-        private Vector2 gridStart;
-        private int gridCellSize;
-        private bool canMove = true;
+        private Vector2 _gridStart;
+        private int _gridCellSize;
+
+        private bool _isTrapStunned = false;
+        private int _trapStunDuration = 0;
+        private const int MaxTrapStun = 1;
 
         public Player(Texture2D front, Texture2D back, Vector2 gridStart, int gridCellSize)
         {
-            this.FrontTexture = front;
-            this.BackTexture = back;
-            this.CurrentTexture = front;
-            this.gridStart = gridStart;
-            this.gridCellSize = gridCellSize;
+            FrontTexture = front;
+            BackTexture = back;
+            CurrentTexture = front;
+            _gridStart = gridStart;
+            _gridCellSize = gridCellSize;
             GridPosition = new Point(0, 0);
         }
 
-        public void Update(KeyboardState keyboard)
+        public void Update(GameTime gameTime)
         {
-            if (canMove)
+            if (_isTrapStunned)
             {
-                if (keyboard.IsKeyDown(Keys.D) && GridPosition.X < 3) { GridPosition.X++; canMove = false; }
-                if (keyboard.IsKeyDown(Keys.A) && GridPosition.X > 0) { GridPosition.X--; canMove = false; }
-                if (keyboard.IsKeyDown(Keys.W) && GridPosition.Y > 0)
-                {
-                    GridPosition.Y--; CurrentTexture = BackTexture; canMove = false;
-                }
-                if (keyboard.IsKeyDown(Keys.S) && GridPosition.Y < 3)
-                {
-                    GridPosition.Y++; CurrentTexture = FrontTexture; canMove = false;
-                }
-            }
-
-            if (!keyboard.IsKeyDown(Keys.W) && !keyboard.IsKeyDown(Keys.S) &&
-                !keyboard.IsKeyDown(Keys.A) && !keyboard.IsKeyDown(Keys.D))
-            {
-                canMove = true;
+                _trapStunDuration--;
+                if (_trapStunDuration <= 0)
+                    _isTrapStunned = false;
             }
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            Vector2 pos = new Vector2(GridPosition.X * gridCellSize + gridStart.X,
-                                      GridPosition.Y * gridCellSize + gridStart.Y);
+            Vector2 pos = new Vector2(GridPosition.X * _gridCellSize + _gridStart.X,
+                                      GridPosition.Y * _gridCellSize + _gridStart.Y);
 
-            pos.X += (gridCellSize - CurrentTexture.Width * Scale) / 2;
-            pos.Y += (gridCellSize - CurrentTexture.Height * Scale) / 2;
+            pos.X += (_gridCellSize - CurrentTexture.Width * Scale) / 2;
+            pos.Y += (_gridCellSize - CurrentTexture.Height * Scale) / 2;
 
-            spriteBatch.Draw(CurrentTexture, pos, null, Color.White, 0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
+            Color drawColor = _isTrapStunned ? Color.Red * 0.7f : Color.White;
+            spriteBatch.Draw(CurrentTexture, pos, null, drawColor, 0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
         }
 
         public Vector2 GetCenterPosition()
         {
-            return new Vector2(GridPosition.X * gridCellSize + gridStart.X + gridCellSize / 2,
-                               GridPosition.Y * gridCellSize + gridStart.Y + gridCellSize / 2);
+            return new Vector2(GridPosition.X * _gridCellSize + _gridStart.X + _gridCellSize / 2,
+                               GridPosition.Y * _gridCellSize + _gridStart.Y + _gridCellSize / 2);
+        }
+
+        public void TriggerTrapEffect()
+        {
+            _isTrapStunned = true;
+            _trapStunDuration = MaxTrapStun;
+        }
+
+        public bool IsStunned() => _isTrapStunned;
+
+        public void ApplyAction(PlayerAction action)
+        {
+            if (_isTrapStunned) return;
+
+            switch (action.ActionType)
+            {
+                case PlayerActionType.MoveUp:
+                    if (GridPosition.Y > 0)
+                    {
+                        GridPosition = new Point(GridPosition.X, GridPosition.Y - 1);
+                        CurrentTexture = BackTexture;
+                    }
+                    break;
+
+                case PlayerActionType.MoveDown:
+                    if (GridPosition.Y < 3)
+                    {
+                        GridPosition = new Point(GridPosition.X, GridPosition.Y + 1);
+                        CurrentTexture = FrontTexture;
+                    }
+                    break;
+
+                case PlayerActionType.MoveLeft:
+                    if (GridPosition.X > 0)
+                    {
+                        GridPosition = new Point(GridPosition.X - 1, GridPosition.Y);
+                        CurrentTexture = FrontTexture;
+                    }
+                    break;
+
+                case PlayerActionType.MoveRight:
+                    if (GridPosition.X < 3)
+                    {
+                        GridPosition = new Point(GridPosition.X + 1, GridPosition.Y);
+                        CurrentTexture = FrontTexture;
+                    }
+                    break;
+
+                case PlayerActionType.Dodge:
+                    break;
+
+            }
         }
     }
 }

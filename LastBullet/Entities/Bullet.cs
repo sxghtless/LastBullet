@@ -14,7 +14,8 @@ namespace LastBullet.Entities
         {
             Position = start;
             Vector2 direction = target - start;
-            direction.Normalize();
+            if (direction != Vector2.Zero)
+                direction.Normalize();
             velocity = direction * speed;
             this.texture = texture;
         }
@@ -26,7 +27,7 @@ namespace LastBullet.Entities
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            spriteBatch.Draw(texture, Position, Color.White);
+            spriteBatch.Draw(texture, Position, null, Color.White, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
         }
 
         public bool IsOffScreen(int screenWidth, int screenHeight)
